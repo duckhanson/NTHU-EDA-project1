@@ -1,4 +1,5 @@
 # NTHU CSR Design Automation 111
+tags: #eda, #algorithm, #tsp, #dynamic_programming
 ## Description
 * This project is for NTHU CSR Design Automation 111.
 * Problem: to implement TSP solver with Dynamic Programming.

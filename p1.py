@@ -84,20 +84,26 @@ import numpy as np
 from itertools import permutations
 
 def create_graph(edges):
-    graph = np.asarray([[np.inf] * (num_vtx + 1)] * (num_vtx + 1))
+    graph = np.asarray([[np.inf] * (num_vtx)] * (num_vtx))
 
     for u, u_edges in enumerate(edges):
-
+        if u == 0:
+            continue
         for v, w in u_edges.items():
-            graph[u][v] = w
+            graph[u - 1][v - 1] = w
     
     return graph
+
+create_graph(edges)
+
+def path_begin_from_1(path):
+    return [p+1 for p in path]
 
 
 # implementation of traveling Salesman Problem
 def travellingSalesmanProblem(graph, src):
     # store all vertex apart from src vertex
-    vertex = [i for i in range(1, num_vtx + 1)]
+    vertex = [i for i in range(num_vtx)]
 
     # store minimum weight Hamiltonian Cycle
     min_cost = np.inf
@@ -109,6 +115,7 @@ def travellingSalesmanProblem(graph, src):
         cur_path_weight = 0
 
         # compute current path weight
+        
         s = perm[0] 
         k = s
         for v in perm:
@@ -121,70 +128,188 @@ def travellingSalesmanProblem(graph, src):
             min_cost = cur_path_weight
             min_path = perm
     
-    min_path = (*min_path, src)
-    
     return min_path, min_cost
 
 graph = create_graph(edges=edges)
-min_path, min_cost = travellingSalesmanProblem(graph, 1)
+min_path, min_cost = travellingSalesmanProblem(graph, 0)
+print(f"from implement 1 [brute force]: min_path={path_begin_from_1(min_path)}, min_cost={min_cost}")
 
-print(f"from implement 1: min_path={min_path}, min_cost={min_cost}")
+# implement 2
+'''
+From https://youtu.be/cY4HiiFHO1o & https://github.com/kristiansandratama/travelling-salesman-problem-dynamic-programming/blob/main/main.py
+Implement TSP-DP
+'''
+import numpy as np
 
-# implement 2, using dp approach
-# record and update weights from each cities to other cities
-# implementation of traveling Salesman Problem
-def travellingSalesmanProblem(graph, src):
+class TravellingSalesmanProblem:
+    def __init__(self, distance, start):
+        '''
+        Main Idea is to use "memo" to record calculated paths.
+        
+        para:
+            distance - 2D adjacency matrix represents graph
+            start - The start node (0 ≤ S < N) 
+        '''
 
-    # print(f"original graph: \n {graph}")
-    # store all vertex apart from src vertex
-    vertex = [i for i in range(1, num_vtx + 1)]
+        self.distance_matrix = distance
+        self.start_city = start
+        self.total_cities = len(distance)
 
-    # store minimum weight Hamiltonian Cycle
-    min_path = np.inf
-    
-    # From i to j, if there exists a path via k whose cost is lower than directly from i to j,
-    # we will choose path i -> k -> j, and update graph[i][j] = graph[i][k] + graph[k][j].
-    for n_iter in range(num_vtx + 1):
-        # print(f'#{n_iter}')
-        # print(graph)
-        for i in range(1, num_vtx + 1):
-            for j in range(i, num_vtx + 1):
-                for k in range(1, num_vtx + 1):
-                    via_k = graph[i][k] + graph[k][j]
+        # 1111...111 represents all cities are visited
+        self.end_state = (1 << self.total_cities) - 1
+        
+        self.memo = np.full((self.total_cities, 1<<self.total_cities), None)
+        self.shortest_path = []
+        self.min_path_cost = float('inf')
 
-                    if graph[i][j] > via_k:
-                        graph[i][j] = min(graph[i][j], via_k)
-                        graph[j][i] = graph[i][j]
-                        
+    def solve(self):
+        self.__initialize_memo()
 
-	
-    # print(f"after hamiltonian cycle solver: \n {graph}")
-    
-    path = [src]
-    min_total_cost = 0
-    cur = src
-    for it in range(num_vtx-1):
-        m_idx, m_cost = -1, np.inf
-        for i, c in enumerate(graph[cur]):
-            if i not in path and c < m_cost:
-                m_cost = c
-                m_idx = i
-        path.append(m_idx)
-        min_total_cost += m_cost
-        # print(f"#iter{it}, graph[{cur}]={graph[cur]}, next city idx={m_idx}, cost={m_cost}, total_cost={min_total_cost}")
-        cur = m_idx
-    
-    path.append(src)
-    min_total_cost += graph[cur][src]
-    # print(f"#iter{num_vtx-1}, graph[{cur}]={graph[cur]}, next city idx={src}, cost={graph[cur][src]}, total_cost={min_total_cost}\n\n")
+        for num_element in range(3, self.total_cities + 1):
+            # The __initiate_combination function generates all bit sets
+            # of size N with r bits set to 1. 
+            # e.g. __initiate_combination(3, 4) = {0111, 1011, 1101, 1110}
+            for subset in self.__initiate_combination(num_element):
+                # if s is not in subset, meaning that we traversed s node.
+                if self.__is_not_in_subset(self.start_city, subset):
+                    continue
 
-    return path, min_total_cost
+                for next_city in range(self.total_cities):
 
-graph = create_graph(edges=edges)
-min_path, min_cost = travellingSalesmanProblem(graph, 1)
-print(f"from implement 2: min_path={min_path}, min_cost={min_cost}")
+                    if next_city == self.start_city or self.__is_not_in_subset(next_city, subset):
+                        continue
+
+                    subset_without_next_city = subset ^ (1 << next_city)
+                    min_distance = float('inf')
+
+                    for last_city in range(self.total_cities):
+
+                        if last_city == self.start_city or \
+                                last_city == next_city or \
+                                self.__is_not_in_subset(last_city, subset):
+                            continue
+
+                        new_distance = \
+                            self.memo[last_city][subset_without_next_city] + self.distance_matrix[last_city][next_city]
+
+                        if new_distance < min_distance:
+                            min_distance = new_distance
+
+                    self.memo[next_city][subset] = min_distance
+
+        self.__calculate_min_cost()
+        self.__find_shortest_path()
+
+    def __calculate_min_cost(self):
+        for i in range(self.total_cities):
+
+            if i == self.start_city:
+                continue
+
+            path_cost = self.memo[i][self.end_state] + self.distance_matrix[i][self.start_city]
+
+            if path_cost < self.min_path_cost:
+                self.min_path_cost = path_cost
+        
+
+    def __find_shortest_path(self):
+        state = self.end_state
+
+        for i in range(1, self.total_cities):
+            best_index = -1
+            best_distance = float('inf')
+            # try to find the best path for [i] to [last] via state
+            for j in range(self.total_cities):
+
+                if j == self.start_city or self.__is_not_in_subset(j, state):
+                    continue
+
+                new_distance = self.memo[j][state]
+
+                if new_distance <= best_distance:
+                    best_index = j
+                    best_distance = new_distance
+
+            self.shortest_path.append(best_index)
+            state = state ^ (1 << best_index)
+
+        self.shortest_path.append(self.start_city)
+        self.shortest_path.reverse()
+        self.shortest_path.append(self.start_city)
+
+    def __initialize_memo(self):
+        for destination_city in range(self.total_cities):
+
+            if destination_city == self.start_city:
+                continue
+                # Store the optimal value from start_city to destination_city
+                # LHS - to go to destination_city, there exists a path that 
+                # traverses start_city and destination_city and costs m[start_city][destination_city].
+                # RHS - the cost from start_city to destination_city.
+            self.memo[destination_city][1 << self.start_city | 1 << destination_city] = \
+                self.distance_matrix[self.start_city][destination_city]
+
+    # This method generates all bit sets of size n where r bits
+    # are set to one. The result is returned as a list of integer masks.
+    def __initiate_combination(self, num_element):
+        subset_list = []
+        self.__initialize_combination(0, 0, num_element, self.total_cities, subset_list)
+        return subset_list
+
+    # To find all the combinations of size r we need to recurse until we have
+    # selected r elements (aka r = 0), otherwise if r != 0 then we still need to select
+    # an element which is found after the position of our last selected element    
+    def __initialize_combination(self, subset, at, num_element, total_cities, subset_list):
+
+        elements_left_to_pick = total_cities - at
+        if elements_left_to_pick < num_element:
+            return
+
+        if num_element == 0:
+            subset_list.append(subset)
+        else:
+            for i in range(at, total_cities):
+                # Try including this element
+                subset |= 1 << i
+                self.__initialize_combination(subset, i + 1, num_element - 1, total_cities, subset_list)
+                # Backtrack and try the instance where we did not include this element
+                subset &= ~(1 << i)
+
+    @staticmethod
+    def __is_not_in_subset(element, subset):
+        return ((1 << element) & subset) == 0
 
 
+distance_matrix_test_1 = [
+    [0, 328, 259, 180, 314, 294, 269, 391],
+    [328, 0, 83, 279, 107, 131, 208, 136],
+    [259, 83, 0, 257, 70, 86, 172, 152],
+    [180, 279, 257, 0, 190, 169, 157, 273],
+    [314, 107, 70, 190, 0, 25, 108, 182],
+    [294, 131, 86, 169, 25, 0, 84, 158],
+    [269, 208, 172, 157, 108, 84, 0, 140],
+    [391, 136, 152, 273, 182, 158, 140, 0],
+]
+
+n = 6
+distance_matrix_test_2 = np.full((n, n), np.inf)
+distance_matrix_test_2[5][0] = 10
+distance_matrix_test_2[1][5] = 12
+distance_matrix_test_2[4][1] = 2
+distance_matrix_test_2[2][4] = 4
+distance_matrix_test_2[3][2] = 6
+distance_matrix_test_2[0][3] = 8
+
+distance_matrix_test_3 = graph # our hw test case
+
+
+
+start_city = 0
+
+tour = TravellingSalesmanProblem(distance_matrix_test_3, start_city)
+tour.solve()
+
+print(f"from implement 2 [dynamic programming]: min_path={path_begin_from_1(tour.shortest_path)}, min_cost={tour.min_path_cost}")
 
 
 
