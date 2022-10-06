@@ -1,28 +1,11 @@
-
+'''
+Inputs:
+start end value: the start vertex, the end vertex and the weight of the edge.
+e.g. 0 1 10, from 0 to 1 costs 10 units.
+'''
 num_vtx = 6
 edges = [{i: 0} for i in range(num_vtx + 1)]
 
-def my_add_edge(direct_graph = False):
-    '''
-    Inputs:
-    1. start: the start vertex.
-    2. end: the end vertex. 
-    3. value: the weight of the edge.
-    e.g. 0 1 10, from 0 to 1 costs 10 units.
-    '''
-    while True:
-        start = int(input("start vtx: "))
-        if start == -1:
-            break       
-        end = int(input("end vtx: "))
-        assert start > 0
-        assert end < num_vtx + 1
-        cost = int(input("cost: "))
-        edges[start][end] = cost
-        if not direct_graph:
-            edges[end][start] = cost
-
-# add_edge(direct_graph=False)
 
 def p1_add_edge(direct_graph = False):
     
@@ -56,32 +39,13 @@ def p1_add_edge(direct_graph = False):
             edges[v][u] = w
 
 
-# p1_add_edge(direct_graph=False)
-
-''' 
-In hw 1, edges = [{0: 0},
- {1: 0, 2: 1, 5: 4, 6: 2},
- {2: 0, 5: 5, 4: 8, 1: 1},
- {3: 0, 4: 1, 5: 5, 6: 6},
- {4: 0, 6: 2, 2: 8, 3: 1},
- {5: 0, 6: 3, 1: 4, 2: 5, 3: 5},
- {6: 0, 1: 2, 3: 6, 4: 2, 5: 3}]
-'''
-
-edges = [{0: 0},
- {1: 0, 2: 1, 5: 4, 6: 2},
- {2: 0, 5: 5, 4: 8, 1: 1},
- {3: 0, 4: 1, 5: 5, 6: 6},
- {4: 0, 6: 2, 2: 8, 3: 1},
- {5: 0, 6: 3, 1: 4, 2: 5, 3: 5},
- {6: 0, 1: 2, 3: 6, 4: 2, 5: 3}]
-
+p1_add_edge(direct_graph=False)
 
 # implement 1, using naive approach
 # using permuations to find all possible paths
+
 import math
 import numpy as np
-from itertools import permutations
 
 def create_graph(edges):
     graph = np.asarray([[np.inf] * (num_vtx)] * (num_vtx))
@@ -94,53 +58,12 @@ def create_graph(edges):
     
     return graph
 
-create_graph(edges)
+graph = create_graph(edges)
 
-def path_begin_from_1(path):
-    return [p+1 for p in path]
-
-
-# implementation of traveling Salesman Problem
-def travellingSalesmanProblem(graph, src):
-    # store all vertex apart from src vertex
-    vertex = [i for i in range(num_vtx)]
-
-    # store minimum weight Hamiltonian Cycle
-    min_cost = np.inf
-    min_path = []
-    perms = permutations(vertex)
-    for perm in perms:
-
-        # store current Path weight(cost)
-        cur_path_weight = 0
-
-        # compute current path weight
-        
-        s = perm[0] 
-        k = s
-        for v in perm:
-            cur_path_weight += graph[k][v]
-            k = v
-        cur_path_weight += graph[k][s]
-
-        # update minimum
-        if min_cost > cur_path_weight:
-            min_cost = cur_path_weight
-            min_path = perm
-    
-    return min_path, min_cost
-
-graph = create_graph(edges=edges)
-min_path, min_cost = travellingSalesmanProblem(graph, 0)
-print(f"from implement 1 [brute force]: min_path={path_begin_from_1(min_path)}, min_cost={min_cost}")
-
-# implement 2
 '''
 From https://youtu.be/cY4HiiFHO1o & https://github.com/kristiansandratama/travelling-salesman-problem-dynamic-programming/blob/main/main.py
 Implement TSP-DP
 '''
-import numpy as np
-
 class TravellingSalesmanProblem:
     def __init__(self, distance, start):
         '''
@@ -279,39 +202,12 @@ class TravellingSalesmanProblem:
     def __is_not_in_subset(element, subset):
         return ((1 << element) & subset) == 0
 
-
-distance_matrix_test_1 = [
-    [0, 328, 259, 180, 314, 294, 269, 391],
-    [328, 0, 83, 279, 107, 131, 208, 136],
-    [259, 83, 0, 257, 70, 86, 172, 152],
-    [180, 279, 257, 0, 190, 169, 157, 273],
-    [314, 107, 70, 190, 0, 25, 108, 182],
-    [294, 131, 86, 169, 25, 0, 84, 158],
-    [269, 208, 172, 157, 108, 84, 0, 140],
-    [391, 136, 152, 273, 182, 158, 140, 0],
-]
-
-n = 6
-distance_matrix_test_2 = np.full((n, n), np.inf)
-distance_matrix_test_2[5][0] = 10
-distance_matrix_test_2[1][5] = 12
-distance_matrix_test_2[4][1] = 2
-distance_matrix_test_2[2][4] = 4
-distance_matrix_test_2[3][2] = 6
-distance_matrix_test_2[0][3] = 8
-
 distance_matrix_test_3 = graph # our hw test case
-
-
 
 start_city = 0
 
 tour = TravellingSalesmanProblem(distance_matrix_test_3, start_city)
 tour.solve()
 
-print(f"from implement 2 [dynamic programming]: min_path={path_begin_from_1(tour.shortest_path)}, min_cost={tour.min_path_cost}")
-
-
-
-
-
+print("Shortest path :", tour.shortest_path)
+print("Minimum path cost :", tour.min_path_cost)
