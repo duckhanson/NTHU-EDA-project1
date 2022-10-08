@@ -137,6 +137,7 @@ class TravellingSalesmanProblem:
 
     def __find_shortest_path(self):
         state = self.end_state
+        last_index = self.start_city
 
         for i in range(1, self.total_cities):
             best_index = -1
@@ -147,14 +148,15 @@ class TravellingSalesmanProblem:
                 if j == self.start_city or self.__is_not_in_subset(j, state):
                     continue
 
-                new_distance = self.memo[j][state]
-
+                new_distance = self.memo[j][state] + self.distance_matrix[j][last_index]
+                # prv_distance =
                 if new_distance <= best_distance:
                     best_index = j
                     best_distance = new_distance
 
             self.shortest_path.append(best_index)
             state = state ^ (1 << best_index)
+            last_index = best_index
 
         self.shortest_path.append(self.start_city)
         self.shortest_path.reverse()
@@ -209,5 +211,9 @@ start_city = 0
 tour = TravellingSalesmanProblem(distance_matrix_test_3, start_city)
 tour.solve()
 
-print("Shortest path :", tour.shortest_path)
+def start_from_1(path):
+    return [p + 1 for p in path]
+
+
+print("Shortest path :", start_from_1(tour.shortest_path))
 print("Minimum path cost :", tour.min_path_cost)
